@@ -3,4 +3,5 @@
 .RData
 .Ruserdata
 
+**/scripts/scraper.R
 **/data/
