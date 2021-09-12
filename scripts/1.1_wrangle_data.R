@@ -48,6 +48,8 @@ match_chains_summary <- match_chains %>%
          roundNumber, 
          homeTeam.teamName, 
          awayTeam.teamName, 
+         homeTeamScore.totalScore,
+         awayTeamScore.totalScore,
          chain_number, 
          displayOrder, 
          initialState, 
@@ -55,12 +57,15 @@ match_chains_summary <- match_chains %>%
          description,
          disposal,
          position) %>% 
-  group_by(matchID, season, roundNumber, homeTeam.teamName, awayTeam.teamName, chain_number) %>% 
+  group_by(matchID, season, roundNumber, 
+           homeTeam.teamName, awayTeam.teamName, 
+           homeTeamScore.totalScore, awayTeamScore.totalScore,
+           chain_number) %>% 
   summarise(initialState = max(initialState),
             finalState = max(finalState),
             initialPosition = max(ifelse(displayOrder==min(displayOrder),position,"AAAA")),
-            finalPosition = max(ifelse(displayOrder==max(displayOrder),position,"AAAA")))
-
+            finalPosition = max(ifelse(displayOrder==max(displayOrder),position,"AAAA"))) %>% 
+  ungroup()
 
 #### * Get chain averages for weightings ----
 
