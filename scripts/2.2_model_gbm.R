@@ -128,6 +128,8 @@ ggplot(vote_prediction_residual, aes(x = .pred, y = residual_pct)) +
 model_obj <- xgboost_model_final %>%
   fit(formula = brownlow_votes ~ ., data = train_processed) 
 
+save(model_obj, file = here("output","v1.00_model_gbm.RData"))
+
 # plot variable importance
 model_obj %>% vip:::vi(.)
 
