@@ -28,5 +28,15 @@ player_data_full %>%
     player_data_full
 
 
+team_portions <- player_data_full[27:78] / player_data_full[,substr(names(player_data_full),1,5)=="team."]
+match_portions <- player_data_full[27:78] / player_data_full[,substr(names(player_data_full),1,6)=="match."]
 
+# assign new variable names
+team_portions %>% setNames(object = ., nm = paste0('team_pct.', names(.)[1:ncol(.)])) -> team_portions
+match_portions %>% setNames(object = ., nm = paste0('match_pct.', names(.)[1:ncol(.)])) -> match_portions
 
+# combine
+player_data_full.cleaned <- cbind(player_data_full,team_portions,match_portions)
+
+# save data
+save(player_data_full.cleaned, file = here("data","player_data_full.cleaned.Rdata"))
