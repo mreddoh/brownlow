@@ -29,12 +29,15 @@ edgelist <- match_chains %>%
 #### ** Test on one match and team ----
 
 edgelist.matrix <- as.matrix(edgelist %>% 
-                               filter(matchID==1) %>% 
+                               filter(matchID==84) %>% 
                                filter(team=="Carlton") %>% 
+                               filter(chain_number <= (match_chains %>% filter(matchID==84 & period<=2) %>% summarise(max(chain_number)) %>% pull())) %>% 
                                select(player.from, player.to)
 )
 
 graph <- graph.edgelist(edgelist.matrix, directed=TRUE)
+
+plot(graph)
 
 weights <- edgelist %>% 
   filter(matchID==1) %>% 
@@ -49,7 +52,8 @@ score = match_chains %>%
   pull()
 
 attacking_influence_score <- page_rank(graph, 
-                                       weights = weights, 
+                                       #weights = weights, 
+                                       weights = NULL, #hmmm... weights not acting as thought, will have to look further but first just try unweighted
                                        directed = TRUE)[[1]] %>% 
   enframe() %>% 
   mutate(value = value*score)
@@ -85,7 +89,7 @@ for (i in 1:n) {
     unique() %>% 
     pull()
   
-  temp <- page_rank(graph, weights = weights, directed = TRUE)[[1]] %>% 
+  temp <- page_rank(graph, weights = NULL, directed = TRUE)[[1]] %>% 
     enframe() %>% 
     mutate(value = value*score,
            matchID = matchID_i,
@@ -95,15 +99,6 @@ for (i in 1:n) {
   if (i==1) {attacking_influence_score <- temp} else {attacking_influence_score <- rbind(attacking_influence_score,temp)}
 
 }
-
-
-
-
-
-
-
-
-
 
 
 
