@@ -39,12 +39,10 @@ match_portions %>% setNames(object = ., nm = paste0('match_pct.', names(.)[1:nco
 ## * Combine datasets ----
 player_data_full.cleaned <- cbind(player_data_full,team_portions,match_portions)
 
-
 # Add in new variables based result, i.e. was player in winning team? ----
-
-
-
-
+player_data_full.cleaned$team_result <- ifelse(player_data_full.cleaned$match_winner==player_data_full.cleaned$player_team, 
+                                               player_data_full.cleaned$match_margin, 
+                                               -1*player_data_full.cleaned$match_margin)
 
 
 # Save data ----

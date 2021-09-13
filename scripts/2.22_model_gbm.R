@@ -41,7 +41,9 @@ model_vars <- c(
   # add new variables 
   "marks_inside_fifty",
   "match_pct.hitouts_to_advantage",
-  "match_pct.ground_ball_gets"
+  "match_pct.ground_ball_gets",
+  # more new variables
+  "team_result"
 )
 
 ds_in <- player_data_full.cleaned %>% 
@@ -111,9 +113,7 @@ xgboost_model_final <- xgboost_model %>%
 final_model_fit <- xgboost_model_final %>%
   fit(formula = brownlow_votes ~ ., data = train_processed) 
 
-xgb.plot.shap(as.matrix(train_processed), model = final_model_fit)
-
-save(final_model_fit, file = here("output","v1.01_model_gbm.RData"))
+save(final_model_fit, file = here("output","v1.10_model_gbm.RData"))
 
 ## * Evaluate performance on test data ----
 
@@ -208,7 +208,7 @@ brownlow_votes %>%
   filter(medal_tally == max(medal_tally)) %>% 
   arrange(season)
 
-## * Check Brownlow Medal Tally for season ----
+## * Check Fyfe ----
 brownlow_votes %>% 
   filter(season==2019) %>% 
   group_by(name) %>% 
@@ -221,3 +221,21 @@ brownlow_votes %>%
   summarise(medal_tally = sum(votes)) %>%
   arrange(-medal_tally)
 
+brownlow_votes %>% 
+  filter(name == "Nat Fyfe") %>% 
+  group_by(season, name) %>% 
+  summarise(medal_tally = sum(votes)) %>% 
+  ungroup() %>% 
+  group_by(season) %>% 
+  filter(medal_tally == max(medal_tally)) %>% 
+  arrange(season)
+
+## * Check the Oliver effect ----
+brownlow_votes %>% 
+  filter(name == "Clayton Oliver") %>% 
+  group_by(season, name) %>% 
+  summarise(medal_tally = sum(votes)) %>% 
+  ungroup() %>% 
+  group_by(season) %>% 
+  filter(medal_tally == max(medal_tally)) %>% 
+  arrange(season)

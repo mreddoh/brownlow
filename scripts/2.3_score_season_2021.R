@@ -12,8 +12,7 @@ all_cores <- parallel::detectCores(logical = FALSE)
 registerDoParallel(cores = all_cores)
 
 # Load data ----
-load(file = here("output","v1.01_model_gbm.RData")) #model_obj
-#load(file = here("output","v1.10_model_gbm.RData")) #model_obj
+load(file = here("output","v1.10_model_gbm.RData")) #model_obj
 load(file = here("data","player_data_2021.Rdata"))
 
 # Apply to 2021 season data ----
@@ -42,7 +41,8 @@ team_portions %>% setNames(object = ., nm = paste0('team_pct.', names(.)[1:ncol(
 match_portions %>% setNames(object = ., nm = paste0('match_pct.', names(.)[1:ncol(.)])) -> match_portions
 
 # combine
-player_data_2021.cleaned <- cbind(player_data_2021,team_portions,match_portions)
+player_data_2021.cleaned <- cbind(player_data_2021,team_portions,match_portions) %>% 
+  mutate(team_result = ifelse(match_winner==player_team, match_margin, -1*match_margin))
 
 ds_in <- player_data_2021.cleaned %>% 
   mutate(id = row_number()) %>% 
@@ -95,8 +95,7 @@ brownlow_votes %>%
   arrange(as.integer(match_round)) %>% 
   pivot_wider(names_from = match_round, names_prefix = "R", values_from = votes, values_fill = 0) %>% 
   rename(Total = R99) %>% 
-  arrange(-Total) %>% 
-  knitr::kable()
+  arrange(-Total)
 
 brownlow_votes %>% 
   select(name,match_round,votes) %>% 
@@ -110,7 +109,7 @@ brownlow_votes %>%
   kable_styling("striped", font_size = 14, position = "center", full_width = FALSE) %>%
   column_spec(1, bold = TRUE, border_right = TRUE, color = "black", extra_css = "text-align:right") %>%
   column_spec(2:24, extra_css = "text-align:center") %>%
-  kableExtra::save_kable(., file = here("predictions","classic_xgb_v1.1.html"))
+  kableExtra::save_kable(., file = here("predictions","classic_xgb_v1.2.html"))
 
 
 
