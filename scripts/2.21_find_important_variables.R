@@ -29,6 +29,7 @@ ds_split <- rsample::initial_split(data = ds_in, prop = 0.2, strata = brownlow_v
 preprocessing_recipe <- recipes::recipe(brownlow_votes ~ ., data = training(ds_split)) %>%
   recipes::step_string2factor(all_nominal()) %>% # convert categorical variables to factors
   recipes::step_other(all_nominal(), threshold = 0.01) %>% # combine low frequency factor levels
+  recipes::step_rm(id) %>% # remove id variable
   recipes::step_nzv(all_nominal()) %>% # remove no variance predictors which provide no predictive information 
   prep()
 
@@ -101,7 +102,7 @@ knitr::kable(xgboost_score_train)
 test_processed  <- bake(preprocessing_recipe, new_data = testing(ds_split))
 
 test_prediction <- xgboost_model_final %>%
-  fit(formula = brownlow_votes ~ ., data = train_processed) %>%
+  fit(formula = brownlow_votes ~ ., data = test_processed) %>%
   predict(new_data = test_processed) %>%
   bind_cols(testing(ds_split))
 
@@ -128,54 +129,7 @@ ggplot(vote_prediction_residual, aes(x = .pred, y = residual_pct)) +
 model_obj <- xgboost_model_final %>%
   fit(formula = brownlow_votes ~ ., data = train_processed) 
 
-save(model_obj, file = here("output","v1.00_model_gbm.RData"))
+# Plot variable importance ----
+vi <- model_obj %>% vip:::vi(.)
 
-# plot variable importance
-model_obj %>% vip:::vi(.)
-
-train_prediction %>%
-  select(player_position, .pred) %>% 
-  ggplot(., aes(x=player_position, y=.pred)) + geom_boxplot()
-
-train_prediction %>%
-  select(match_pct.afl_fantasy_score, .pred) %>% 
-  ggplot(., aes(x=match_pct.afl_fantasy_score, y=.pred)) + geom_point()
-
-
-
-# Merge predictions back onto original dataset ----
-full_processed <- bake(preprocessing_recipe, new_data = ds_in)
-
-full_prediction <- xgboost_model_final %>%
-  fit(formula = brownlow_votes ~ ., data = full_processed) %>%
-  predict(new_data = full_processed) %>%
-  bind_cols(ds_in)
-
-full_out <- full_prediction %>%
-  select(id,.pred) %>%
-  rename(predicted_votes_raw = .pred) %>% 
-  left_join(.,(player_data_full.cleaned %>% mutate(id = row_number())),by=c("id")) %>% 
-  select(id:player_position) %>% 
-  mutate(name = paste(player_first_name,player_last_name,sep=" "),
-         season = substr(match_date,1,4))
-
-# Calculate Votes ----
-
-## * Apply votes using dplyr method ----
-brownlow_votes <- full_out %>% 
-  group_by(match_id) %>% 
-  mutate(votes = rank(-predicted_votes_raw, ties.method = "random")) %>% 
-  filter(votes<=3) %>% 
-  mutate(votes = rank(-votes, ties.method = "random")) %>% 
-  ungroup() %>% 
-  select(match_id,season,name,votes)
-
-## * Check Brownlow Medal Tally ----
-brownlow_votes %>% 
-  group_by(season, name) %>% 
-  summarise(medal_tally = sum(votes)) %>% 
-  ungroup() %>% 
-  group_by(season) %>% 
-  filter(medal_tally == max(medal_tally)) %>% 
-  arrange(season)
   

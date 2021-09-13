@@ -12,14 +12,13 @@ all_cores <- parallel::detectCores(logical = FALSE)
 registerDoParallel(cores = all_cores)
 
 # Load data ----
-load(file = here("output","v1.00_model_gbm.RData")) #model_obj
+load(file = here("output","v1.01_model_gbm.RData")) #model_obj
+#load(file = here("output","v1.10_model_gbm.RData")) #model_obj
 load(file = here("data","player_data_2021.Rdata"))
 
 # Apply to 2021 season data ----
 
 ## * Prep data ----
-player_data_2021 %>% mutate(supercoach_score = afl_fantasy_score) -> player_data_2021
-
 team_totals <- player_data_2021 %>% 
   group_by(match_id, player_team) %>% 
   summarise_at(.vars = names(.)[27:78], sum) %>% 
@@ -47,15 +46,12 @@ player_data_2021.cleaned <- cbind(player_data_2021,team_portions,match_portions)
 
 ds_in <- player_data_2021.cleaned %>% 
   mutate(id = row_number()) %>% 
-  select(id, player_position, team_pct.kicks:match_pct.spoils, brownlow_votes) %>% 
-  select(-c(team_pct.brownlow_votes,match_pct.brownlow_votes))
+  select(id, all_of(model_vars), brownlow_votes)
 
 ## * Apply model ----
 oot_processed <- bake(preprocessing_recipe, new_data = ds_in)
 
-oot_prediction <- xgboost_model_final %>%
-  fit(formula = brownlow_votes ~ ., data = oot_processed) %>%
-  predict(new_data = oot_processed) %>%
+oot_prediction <- predict(object = final_model_fit, new_data = oot_processed) %>%
   bind_cols(ds_in)
 
 oot_out <- oot_prediction %>%
@@ -76,12 +72,46 @@ brownlow_votes <- oot_out %>%
   filter(votes<=3) %>% 
   mutate(votes = rank(-votes, ties.method = "random")) %>% 
   ungroup() %>% 
-  select(match_id,season,name,votes)
+  select(match_id,season,match_round,name,votes)
 
 ## * Check Brownlow Medal Tally ----
-brownlow_votes %>% 
+result <- brownlow_votes %>% 
   group_by(name) %>% 
   summarise(medal_tally = sum(votes)) %>% 
   arrange(-medal_tally)
+
+top20 <- brownlow_votes %>% 
+  group_by(name) %>% 
+  summarise(medal_tally = sum(votes)) %>% 
+  arrange(-medal_tally) %>% 
+  head(20) %>% 
+  pull(name)
+
+# Output graph like Channel 7 ----
+brownlow_votes %>% 
+  select(name,match_round,votes) %>% 
+  rbind(.,(result %>% transmute(name = name, match_round = "99", votes = medal_tally))) %>% 
+  filter(name %in% top20) %>% 
+  arrange(as.integer(match_round)) %>% 
+  pivot_wider(names_from = match_round, names_prefix = "R", values_from = votes, values_fill = 0) %>% 
+  rename(Total = R99) %>% 
+  arrange(-Total) %>% 
+  knitr::kable()
+
+brownlow_votes %>% 
+  select(name,match_round,votes) %>% 
+  rbind(.,(result %>% transmute(name = name, match_round = "99", votes = medal_tally))) %>% 
+  filter(name %in% top20) %>%
+  arrange(as.integer(match_round)) %>% 
+  pivot_wider(names_from = match_round, names_prefix = "R", values_from = votes, values_fill = 0) %>% 
+  rename(Total = R99) %>% 
+  arrange(-Total) %>% 
+  knitr::kable(caption = "Brownlow Medal 2021 | Classic XGBoost Prediction") %>%
+  kable_styling("striped", font_size = 14, position = "center", full_width = FALSE) %>%
+  column_spec(1, bold = TRUE, border_right = TRUE, color = "black", extra_css = "text-align:right") %>%
+  column_spec(2:24, extra_css = "text-align:center") %>%
+  kableExtra::save_kable(., file = here("predictions","classic_xgb_v1.0.html"))
+
+
 
 
