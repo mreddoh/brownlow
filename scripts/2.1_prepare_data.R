@@ -39,10 +39,6 @@ match_portions %>% setNames(object = ., nm = paste0('match_pct.', names(.)[1:nco
 ## * Combine datasets ----
 player_data_full.cleaned <- cbind(player_data_full,team_portions,match_portions)
 
-# Add in new variables based on historical Brownlow performance ----
-
-
-
 
 # Add in new variables based result, i.e. was player in winning team? ----
 

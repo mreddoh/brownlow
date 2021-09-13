@@ -17,7 +17,7 @@ load(file = here("data","player_data_full.cleaned.Rdata"))
 # Begin modeling ----
 
 ## * Prepare dataset specifically for modeling using gradient boosting algorithms ----
-# Subset to potentially predictive variables ----
+# Subset to potentially predictive variables, found in previous step ----
 model_vars <- c(
   "match_weather_type",
   "player_position",
@@ -37,7 +37,11 @@ model_vars <- c(
   "time_on_ground_percentage",
   "team_pct.free_kicks_against",
   "match_pct.centre_clearances",
-  "match_pct.contested_marks"
+  "match_pct.contested_marks",
+  # add new variables 
+  "marks_inside_fifty",
+  "match_pct.hitouts_to_advantage",
+  "match_pct.ground_ball_gets"
 )
 
 ds_in <- player_data_full.cleaned %>% 
@@ -158,7 +162,7 @@ ggplot(vote_prediction_residual, aes(x = .pred, y = residual_pct)) +
   scale_y_continuous(labels = scales::percent)
 
 # plot variable importance
-vi <- final_model_fit %>% vip:::vi(.)
+final_model_fit %>% vip:::vi(.)
 
 train_prediction %>%
   select(player_position, .pred) %>% 
@@ -182,6 +186,7 @@ full_out <- full_prediction %>%
   select(id:player_position) %>% 
   mutate(name = paste(player_first_name,player_last_name,sep=" "),
          season = substr(match_date,1,4))
+
 
 # Calculate Votes ----
 

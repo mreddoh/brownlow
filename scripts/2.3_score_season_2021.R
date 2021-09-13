@@ -110,7 +110,7 @@ brownlow_votes %>%
   kable_styling("striped", font_size = 14, position = "center", full_width = FALSE) %>%
   column_spec(1, bold = TRUE, border_right = TRUE, color = "black", extra_css = "text-align:right") %>%
   column_spec(2:24, extra_css = "text-align:center") %>%
-  kableExtra::save_kable(., file = here("predictions","classic_xgb_v1.0.html"))
+  kableExtra::save_kable(., file = here("predictions","classic_xgb_v1.1.html"))
 
 
 
