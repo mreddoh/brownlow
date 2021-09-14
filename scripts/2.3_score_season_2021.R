@@ -12,7 +12,14 @@ all_cores <- parallel::detectCores(logical = FALSE)
 registerDoParallel(cores = all_cores)
 
 # Load data ----
-load(file = here("output","v1.10_model_gbm.RData")) #model_obj
+version = list.files(here("output")) %>% 
+  tibble() %>% 
+  filter(substr(.,1,1)=="v") %>% 
+  mutate(value = as.numeric(substr(.,2,5))) %>% 
+  summarise(max = paste0("v",max(value) + 0.01,"_model_gbm.RData")) %>% 
+  pull(max)
+
+load(file = here("output",version)) #model_obj
 load(file = here("data","player_data_2021.Rdata"))
 
 # Apply to 2021 season data ----
@@ -109,7 +116,7 @@ brownlow_votes %>%
   kable_styling("striped", font_size = 14, position = "center", full_width = FALSE) %>%
   column_spec(1, bold = TRUE, border_right = TRUE, color = "black", extra_css = "text-align:right") %>%
   column_spec(2:24, extra_css = "text-align:center") %>%
-  kableExtra::save_kable(., file = here("predictions","classic_xgb_v1.2.html"))
+  kableExtra::save_kable(., file = here("predictions","classic_xgb_v1.4.html"))
 
 
 

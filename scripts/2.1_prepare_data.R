@@ -15,12 +15,12 @@ load(file = here("data","player_data_partial.Rdata"))
 team_totals <- player_data_full %>% 
   group_by(match_id, player_team) %>% 
   summarise_at(.vars = names(.)[27:78], sum) %>% 
-  setNames(c(names(.)[1:2],paste0('team.', names(.)[3:ncol(.)])))
+  setNames(c(names(.)[1:2],paste0('team.', names(.)[3:ncol(.) - 1])))
 
 match_totals <- player_data_full %>% 
   group_by(match_id) %>% 
   summarise_at(.vars = names(.)[27:78], sum) %>% 
-  setNames(c(names(.)[1],paste0('match.', names(.)[2:ncol(.)])))
+  setNames(c(names(.)[1],paste0('match.', names(.)[2:ncol(.) - 1])))
 
 ## * Join on variables ----
 player_data_full %>% 
@@ -43,6 +43,7 @@ player_data_full.cleaned <- cbind(player_data_full,team_portions,match_portions)
 player_data_full.cleaned$team_result <- ifelse(player_data_full.cleaned$match_winner==player_data_full.cleaned$player_team, 
                                                player_data_full.cleaned$match_margin, 
                                                -1*player_data_full.cleaned$match_margin)
+
 
 
 # Save data ----

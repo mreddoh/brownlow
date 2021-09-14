@@ -4,4 +4,5 @@
 .Ruserdata
 
 **/scripts/scraper.R
+**/scripts/99.0_output_to_s3.R
 **/data/

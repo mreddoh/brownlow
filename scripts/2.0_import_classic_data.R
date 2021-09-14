@@ -12,9 +12,9 @@ player_data_partial <- fetch_player_stats(season = 1992:2011, source = "fryzigg"
 
 
 # Remove finals! ----
-player_data_2021 %>% filter(str_starts(match_round, "^[0-9]")) -> player_data_2021
-player_data_full %>% filter(str_starts(match_round, "^[0-9]")) -> player_data_full
-player_data_partial %>% filter(str_starts(match_round, "^[0-9]")) -> player_data_partial
+player_data_2021 %>% filter(str_starts(match_round, "^[0-9]")) %>% mutate(id = row_number()) -> player_data_2021
+player_data_full %>% filter(str_starts(match_round, "^[0-9]")) %>% mutate(id = row_number()) -> player_data_full
+player_data_partial %>% filter(str_starts(match_round, "^[0-9]")) %>% mutate(id = row_number()) -> player_data_partial
 
 
 # Save files ----
