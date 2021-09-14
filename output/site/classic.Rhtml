@@ -1,15 +1,96 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Brownlow Medal Prediction | 2021</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  </head>
+    <style>
+      h1 {
+        font-family: arial;
+        margin-left: 15px;
+      }
+      h3 {
+        font-family: arial;
+        margin-left: 15px;
+      }
+      p {
+        font-family: arial;
+        margin-left: 15px;
+      }
+      a {
+        text-decoration: none;
+        font-family: courier;
+        margin-left: 15px;
+      }
+      a:link {
+        color: #AAAAAA;
+        font-weight: bold;
+        border-bottom: none;
+      }
+      a:visited {
+        color: #A9BA9D;
+        border-bottom: none;
+      }
+      a:hover {
+        color: #000000;
+        font-weight: bold;
+        border-bottom: none;
+      }
+
+      table {
+        margin-left: 15px;
+      }
+      
+    </style>
+
+    <h1>Brownlow Medal Prediction <span style="color: #AAAAAA;">| 2021</span></h1>
+    
+      <body>
+      <a href="index.html"><span style="color: #000000;">H</span>OME</a>
+      <a href="classic.html"><span style="color: #000000;">CLASSIC</span></a>
+      <a href="network.html"><span style="color: #000000;">N</span>ETWORK BASED</a>
+      
+      <br><br><br>
+      
+<!--begin.rcode fig.width=7, fig.height=6, echo=FALSE, results='asis', message=FALSE, 
 
 # Load packages ----
 library(tidyverse)
 library(here)
 library(tidymodels)
-library(doParallel)
-library(xgboost)
-library(vip)
+library(kableExtra)
 
-# speed up computation with parallel processing
-all_cores <- parallel::detectCores(logical = FALSE)
-registerDoParallel(cores = all_cores)
+model_vars <- c(
+  #"match_weather_type",
+  "player_position",
+  "match_pct.goals",
+  "match_pct.disposals",
+  "match_pct.score_involvements",
+  "match_pct.shots_at_goal",
+  "match_pct.contested_possessions",
+  "match_pct.inside_fifties",
+  "team_pct.intercepts",
+  "match_pct.kicks",
+  "match_pct.handballs",
+  "match_pct.clangers",
+  "match_pct.rebounds",
+  "match_pct.tackles",
+  "team_pct.metres_gained",
+  "time_on_ground_percentage",
+  #"team_pct.free_kicks_against",
+  "match_pct.centre_clearances",
+  "match_pct.contested_marks",
+  # add new variables 
+  "marks_inside_fifty",
+  "match_pct.hitouts_to_advantage",
+  "match_pct.ground_ball_gets",
+  # more new variables
+  "team_result",
+  # and more
+  "free_kicks_against",
+  "free_kicks_for",
+  "match_pct.goal_assists"
+)
 
 # Load data ----
 version = list.files(here("output")) %>% 
@@ -21,6 +102,7 @@ version = list.files(here("output")) %>%
 
 load(file = here("output",version)) #model_obj
 load(file = here("data","player_data_2021.Rdata"))
+load(file = here("output","preprocessing_recipe.RData"))
 
 # Apply to 2021 season data ----
 
@@ -91,32 +173,31 @@ top20 <- brownlow_votes %>%
   group_by(name) %>% 
   summarise(medal_tally = sum(votes)) %>% 
   arrange(-medal_tally) %>% 
-  head(20) %>% 
+  head(30) %>% 
   pull(name)
 
 # Output graph like Channel 7 ----
 brownlow_votes %>% 
   select(name,match_round,votes) %>% 
   rbind(.,(result %>% transmute(name = name, match_round = "99", votes = medal_tally))) %>% 
-  filter(name %in% top20) %>% 
-  arrange(as.integer(match_round)) %>% 
-  pivot_wider(names_from = match_round, names_prefix = "R", values_from = votes, values_fill = 0) %>% 
-  rename(Total = R99) %>% 
-  arrange(-Total)
-
-brownlow_votes %>% 
-  select(name,match_round,votes) %>% 
-  rbind(.,(result %>% transmute(name = name, match_round = "99", votes = medal_tally))) %>% 
   filter(name %in% top20) %>%
+  rename(Player = name) %>% 
   arrange(as.integer(match_round)) %>% 
   pivot_wider(names_from = match_round, names_prefix = "R", values_from = votes, values_fill = 0) %>% 
   rename(Total = R99) %>% 
   arrange(-Total) %>% 
-  knitr::kable(caption = "Brownlow Medal 2021 | Classic XGBoost Prediction") %>%
-  kable_styling("striped", font_size = 14, position = "center", full_width = FALSE) %>%
+  kable() %>% 
+  kable_styling("striped", font_size = 14, position = "left", full_width = FALSE, html_font = "arial") %>%
   column_spec(1, bold = TRUE, border_right = TRUE, color = "black", extra_css = "text-align:right") %>%
   column_spec(2:24, extra_css = "text-align:center")
 
+end.rcode-->
 
+      <br>
+      
+      <span style="color: #AAAAAA; font-size: x-small;"> Note. Model built using a Gradient Boosting Algorithm, using the previous 9 years. </span>
+      
+      </p>
+      </body>
 
-
+</html>

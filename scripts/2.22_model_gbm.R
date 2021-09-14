@@ -66,6 +66,9 @@ preprocessing_recipe <- recipes::recipe(brownlow_votes ~ ., data = training(ds_s
   recipes::step_nzv(all_nominal()) %>% # remove no variance predictors which provide no predictive information 
   prep()
 
+save(preprocessing_recipe, file = here("output","preprocessing_recipe.RData"))
+
+
 ## * Apply our previously defined preprocessing recipe with bake() ----
 ds_cv_folds <- recipes::bake(preprocessing_recipe, new_data = training(ds_split)) %>%  
   rsample::vfold_cv(v = 3)
@@ -194,7 +197,8 @@ ggplot(vote_prediction_residual, aes(x = .pred, y = residual_pct)) +
   scale_y_continuous(labels = scales::percent)
 
 # plot variable importance
-final_model_fit %>% vip:::vi(.)
+vi <- final_model_fit %>% vip:::vi(.)
+vi
 
 train_prediction %>%
   select(player_position, .pred) %>% 

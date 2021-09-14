@@ -100,6 +100,5 @@ for (i in 1:n) {
 
 }
 
-
-
+save(attacking_influence_score, file = here("output","attacking_influence_score.RData"))
 

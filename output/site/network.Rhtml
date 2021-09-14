@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Brownlow Medal Prediction | 2021</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  </head>
+    <style>
+      h1 {
+        font-family: arial;
+        margin-left: 15px;
+      }
+      h3 {
+        font-family: arial;
+        margin-left: 15px;
+      }
+      p {
+        font-family: arial;
+        margin-left: 15px;
+      }
+      a {
+        text-decoration: none;
+        font-family: courier;
+        margin-left: 15px;
+      }
+      a:link {
+        color: #AAAAAA;
+        font-weight: bold;
+        border-bottom: none;
+      }
+      a:visited {
+        color: #A9BA9D;
+        border-bottom: none;
+      }
+      a:hover {
+        color: #000000;
+        font-weight: bold;
+        border-bottom: none;
+      }
+
+      table {
+        margin-left: 15px;
+      }
+      
+    </style>
+
+    <h1>Brownlow Medal Prediction <span style="color: #AAAAAA;">| 2021</span></h1>
+    
+      <body>
+      <a href="index.html"><span style="color: #000000;">H</span>OME</a>
+      <a href="classic.html"><span style="color: #000000;">C</span>LASSIC</a>
+      <a href="network.html"><span style="color: #000000;">NETWORK BASED</span></a>
+      
+      <br><br><br>
+      
+<!--begin.rcode fig.width=7, fig.height=6, echo=FALSE, results='asis', message=FALSE, 
+
+# Load packages ----
+library(tidyverse)
+library(here)
+library(kableExtra)
+
+# Run code ----
+load(file = here("output","match_chains_summary.RData"))
+load(file = here("output","attacking_influence_score.RData"))
+
+## Apply votes using dplyr method ----
+brownlow_votes <- attacking_influence_score %>% 
+  group_by(matchID) %>% 
+  mutate(votes = rank(-value, ties.method = "random")) %>% 
+  filter(votes<=3) %>% 
+  mutate(votes = rank(-votes, ties.method = "random")) %>% 
+  ungroup() %>% 
+  left_join(.,(match_chains_summary %>% select(matchID,roundNumber) %>% unique()),by=c("matchID")) %>% 
+  rename(match_round = roundNumber) %>% 
+  select(matchID,name,match_round,votes)
+
+## * Check Brownlow Medal Tally ----
+result <- brownlow_votes %>% 
+  group_by(name) %>% 
+  summarise(medal_tally = sum(votes)) %>% 
+  arrange(-medal_tally)
+
+top20 <- brownlow_votes %>% 
+  group_by(name) %>% 
+  summarise(medal_tally = sum(votes)) %>% 
+  arrange(-medal_tally) %>% 
+  head(30) %>% 
+  pull(name)
+
+# Output graph like Channel 7 ----
+brownlow_votes %>% 
+  select(name,match_round,votes) %>% 
+  rbind(.,(result %>% transmute(name = name, match_round = "99", votes = medal_tally))) %>% 
+  filter(name %in% top20) %>%
+  rename(Player = name) %>% 
+  arrange(as.integer(match_round)) %>% 
+  pivot_wider(names_from = match_round, names_prefix = "R", values_from = votes, values_fill = 0) %>% 
+  rename(Total = R99) %>% 
+  arrange(-Total) %>% 
+  kable() %>% 
+  kable_styling("striped", font_size = 14, position = "left", full_width = FALSE, html_font = "arial") %>%
+  column_spec(1, bold = TRUE, border_right = TRUE, color = "black", extra_css = "text-align:right") %>%
+  column_spec(2:24, extra_css = "text-align:center")
+
+end.rcode-->
+
+      <br>
+      
+      <span style="color: #AAAAAA; font-size: x-small;"> Note. Model built using pageRank and network attributes, using the previous 2021 chain data. </span>
+      
+      </p>
+      </body>
+
+</html>

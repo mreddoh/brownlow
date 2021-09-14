@@ -106,3 +106,5 @@ match_chains_summary %>%
   # update dataset
   match_chains_summary
 
+save(match_chains_summary, file = here("output","match_chains_summary.RData"))
+
