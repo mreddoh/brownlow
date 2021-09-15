@@ -52,7 +52,7 @@
       
       <br><br><br>
       
-<!--begin.rcode fig.width=7, fig.height=6, echo=FALSE, results='asis', message=FALSE, 
+<!--begin.rcode fig.width=7, fig.height=6, echo=FALSE, results='asis', message=FALSE
 
 # Load packages ----
 library(tidyverse)
@@ -69,16 +69,12 @@ model_vars <- c(
   "match_pct.shots_at_goal",
   "match_pct.contested_possessions",
   "match_pct.inside_fifties",
-  "team_pct.intercepts",
-  "match_pct.kicks",
+  #"team_pct.intercepts",
+  #"match_pct.kicks",
   "match_pct.handballs",
   "match_pct.clangers",
-  "match_pct.rebounds",
   "match_pct.tackles",
   "team_pct.metres_gained",
-  "time_on_ground_percentage",
-  #"team_pct.free_kicks_against",
-  "match_pct.centre_clearances",
   "match_pct.contested_marks",
   # add new variables 
   "marks_inside_fifty",
@@ -86,10 +82,15 @@ model_vars <- c(
   "match_pct.ground_ball_gets",
   # more new variables
   "team_result",
-  # and more
-  "free_kicks_against",
-  "free_kicks_for",
-  "match_pct.goal_assists"
+  "match_pct.goal_assists",
+  # and even more
+  "team.pressure_acts",
+  "hitout_win_percentage",
+  "team_pct.intercept_marks",
+  "match_pct.effective_kicks",
+  "match_pct.goal_assists",
+  "match_pct.score_launches",
+  "match_pct.clearances"
 )
 
 # Load data ----
@@ -163,6 +164,12 @@ brownlow_votes <- oot_out %>%
   ungroup() %>% 
   select(match_id,season,match_round,name,votes)
 
+predicted_total <- oot_out %>% 
+  group_by(name) %>% 
+  summarise(Total = round(sum(predicted_votes_raw))) %>% 
+  ungroup() %>% 
+  arrange(-Total)
+
 ## * Check Brownlow Medal Tally ----
 result <- brownlow_votes %>% 
   group_by(name) %>% 
@@ -173,30 +180,50 @@ top20 <- brownlow_votes %>%
   group_by(name) %>% 
   summarise(medal_tally = sum(votes)) %>% 
   arrange(-medal_tally) %>% 
-  head(30) %>% 
+  head(20) %>% 
   pull(name)
 
 # Output graph like Channel 7 ----
 brownlow_votes %>% 
   select(name,match_round,votes) %>% 
-  rbind(.,(result %>% transmute(name = name, match_round = "99", votes = medal_tally))) %>% 
-  filter(name %in% top20) %>%
-  rename(Player = name) %>% 
+  filter(name %in% top20) %>% 
   arrange(as.integer(match_round)) %>% 
   pivot_wider(names_from = match_round, names_prefix = "R", values_from = votes, values_fill = 0) %>% 
-  rename(Total = R99) %>% 
+  left_join(.,predicted_total,by=c("name")) %>% 
+  rename(Player = name) %>% 
   arrange(-Total) %>% 
   kable() %>% 
   kable_styling("striped", font_size = 14, position = "left", full_width = FALSE, html_font = "arial") %>%
   column_spec(1, bold = TRUE, border_right = TRUE, color = "black", extra_css = "text-align:right") %>%
-  column_spec(2:24, extra_css = "text-align:center")
+  column_spec(2:24, extra_css = "text-align:center") %>%
+  row_spec(0, align = "r")
 
 end.rcode-->
 
       <br>
       
-      <span style="color: #AAAAAA; font-size: x-small;"> Note. Model built using a Gradient Boosting Algorithm, using the previous 9 years. </span>
+      <span style="color: #AAAAAA; font-size: x-small;"> Note. Model built with a Gradient Boosting Algorithm, using the previous 9 years of data. </span>
       
+      <br><br>
+
+<!--begin.rcode fig.width=7, fig.height=6, echo=FALSE, results='asis', message=FALSE
+
+predicted_total %>% 
+  left_join(.,(oot_out %>% select(name,player_team) %>% unique()),by="name") %>% 
+  select(player_team,name,Total) %>% 
+  group_by(player_team) %>% 
+  filter(Total==max(Total)) %>% 
+  arrange(player_team) %>% 
+  rename(Team = player_team, Player = name, Votes = Total) %>% 
+  kable() %>% 
+  kable_styling("striped", font_size = 14, position = "left", full_width = FALSE, html_font = "arial") %>%
+  column_spec(1, bold = TRUE, border_right = TRUE, color = "black", extra_css = "text-align:right") %>%
+  column_spec(2:3, extra_css = "text-align:right") %>%
+  row_spec(0, align = "r")
+
+end.rcode-->
+  
+
       </p>
       </body>
 

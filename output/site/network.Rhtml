@@ -100,13 +100,14 @@ brownlow_votes %>%
   kable() %>% 
   kable_styling("striped", font_size = 14, position = "left", full_width = FALSE, html_font = "arial") %>%
   column_spec(1, bold = TRUE, border_right = TRUE, color = "black", extra_css = "text-align:right") %>%
-  column_spec(2:24, extra_css = "text-align:center")
+  column_spec(2:24, extra_css = "text-align:center") %>%
+  row_spec(0, align = "r")
 
 end.rcode-->
 
       <br>
       
-      <span style="color: #AAAAAA; font-size: x-small;"> Note. Model built using pageRank and network attributes, using the previous 2021 chain data. </span>
+      <span style="color: #AAAAAA; font-size: x-small;"> Note. Model built using pageRank and network attributes, using 2021 match chain data. </span>
       
       </p>
       </body>

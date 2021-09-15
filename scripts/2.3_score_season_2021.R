@@ -20,6 +20,8 @@ version = list.files(here("output")) %>%
   pull(max)
 
 load(file = here("output",version)) #model_obj
+#load(file = here("output","v1.20_model_gbm.RData")) #goodish model
+#load(file = here("output","v1.24_model_gbm.RData")) #maybe better
 load(file = here("data","player_data_2021.Rdata"))
 
 # Apply to 2021 season data ----
@@ -81,6 +83,13 @@ brownlow_votes <- oot_out %>%
   ungroup() %>% 
   select(match_id,season,match_round,name,votes)
 
+predicted_total <- oot_out %>% 
+  group_by(name) %>% 
+  summarise(Total = floor(sum(predicted_votes_raw))) %>% 
+  ungroup() %>% 
+  arrange(-Total)
+
+
 ## * Check Brownlow Medal Tally ----
 result <- brownlow_votes %>% 
   group_by(name) %>% 
@@ -97,26 +106,17 @@ top20 <- brownlow_votes %>%
 # Output graph like Channel 7 ----
 brownlow_votes %>% 
   select(name,match_round,votes) %>% 
-  rbind(.,(result %>% transmute(name = name, match_round = "99", votes = medal_tally))) %>% 
   filter(name %in% top20) %>% 
   arrange(as.integer(match_round)) %>% 
   pivot_wider(names_from = match_round, names_prefix = "R", values_from = votes, values_fill = 0) %>% 
-  rename(Total = R99) %>% 
+  left_join(.,predicted_total,by=c("name")) %>% 
   arrange(-Total)
 
-brownlow_votes %>% 
-  select(name,match_round,votes) %>% 
-  rbind(.,(result %>% transmute(name = name, match_round = "99", votes = medal_tally))) %>% 
-  filter(name %in% top20) %>%
-  arrange(as.integer(match_round)) %>% 
-  pivot_wider(names_from = match_round, names_prefix = "R", values_from = votes, values_fill = 0) %>% 
-  rename(Total = R99) %>% 
-  arrange(-Total) %>% 
-  knitr::kable(caption = "Brownlow Medal 2021 | Classic XGBoost Prediction") %>%
-  kable_styling("striped", font_size = 14, position = "center", full_width = FALSE) %>%
-  column_spec(1, bold = TRUE, border_right = TRUE, color = "black", extra_css = "text-align:right") %>%
-  column_spec(2:24, extra_css = "text-align:center")
-
-
-
+predicted_total %>% 
+  left_join(.,(oot_out %>% select(name,player_team) %>% unique()),by="name") %>% 
+  select(player_team,name,Total) %>% 
+  group_by(player_team) %>% 
+  filter(Total==max(Total)) %>% 
+  arrange(player_team)
+  
 

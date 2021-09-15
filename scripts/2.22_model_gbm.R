@@ -27,16 +27,12 @@ model_vars <- c(
   "match_pct.shots_at_goal",
   "match_pct.contested_possessions",
   "match_pct.inside_fifties",
-  "team_pct.intercepts",
-  "match_pct.kicks",
+  #"team_pct.intercepts",
+  #"match_pct.kicks",
   "match_pct.handballs",
   "match_pct.clangers",
-  "match_pct.rebounds",
   "match_pct.tackles",
   "team_pct.metres_gained",
-  "time_on_ground_percentage",
-  #"team_pct.free_kicks_against",
-  "match_pct.centre_clearances",
   "match_pct.contested_marks",
   # add new variables 
   "marks_inside_fifty",
@@ -44,10 +40,15 @@ model_vars <- c(
   "match_pct.ground_ball_gets",
   # more new variables
   "team_result",
-  # and more
-  "free_kicks_against",
-  "free_kicks_for",
-  "match_pct.goal_assists"
+  "match_pct.goal_assists",
+  # and even more
+  "team.pressure_acts",
+  "hitout_win_percentage",
+  "team_pct.intercept_marks",
+  "match_pct.effective_kicks",
+  "match_pct.goal_assists",
+  "match_pct.score_launches",
+  "match_pct.clearances"
 )
 
 ds_in <- player_data_full.cleaned %>%
@@ -56,7 +57,7 @@ ds_in <- player_data_full.cleaned %>%
 set.seed(3084)
 
 ## * Split into training and testing datasets ----
-ds_split <- rsample::initial_split(data = ds_in, prop = 0.2, strata = brownlow_votes)
+ds_split <- rsample::initial_split(data = ds_in, prop = 0.3, strata = brownlow_votes)
 
 ## * Use the recipes package to define these preprocessing steps, in what is called a “recipe” ----
 preprocessing_recipe <- recipes::recipe(brownlow_votes ~ ., data = training(ds_split)) %>%
@@ -68,14 +69,13 @@ preprocessing_recipe <- recipes::recipe(brownlow_votes ~ ., data = training(ds_s
 
 save(preprocessing_recipe, file = here("output","preprocessing_recipe.RData"))
 
-
 ## * Apply our previously defined preprocessing recipe with bake() ----
 ds_cv_folds <- recipes::bake(preprocessing_recipe, new_data = training(ds_split)) %>%  
   rsample::vfold_cv(v = 3)
 
 ## * Use the parsnip package to define the XGBoost model specification ----
 xgboost_model <- parsnip::boost_tree(mode = "regression",
-                                     trees = tune(),
+                                     trees = 500,
                                      min_n = tune(),
                                      tree_depth = tune(),
                                      learn_rate = tune(),
@@ -83,13 +83,13 @@ xgboost_model <- parsnip::boost_tree(mode = "regression",
   set_engine("xgboost", objective = "reg:squarederror")
 
 ## * Use the tidymodel dials package to specify the parameter set ----
-xgboost_params <- dials::parameters(trees(range = c(5,1000)),
-                                    min_n(range = c(5,15)),
-                                    tree_depth(range = c(2,5)),
+xgboost_params <- dials::parameters(#trees(range = c(100,1000)),
+                                    min_n(range = c(15,45)),
+                                    tree_depth(range = c(3,6)),
                                     learn_rate(),
                                     loss_reduction())
 
-xgboost_grid <- dials::grid_max_entropy(xgboost_params, size = 50)
+xgboost_grid <- dials::grid_max_entropy(xgboost_params, size = 20)
 
 head(xgboost_grid)
 
@@ -108,32 +108,14 @@ xgboost_tuned <- tune::tune_grid(object = xgboost_wf,
                                  control = tune::control_grid(verbose = TRUE))
 
 xgboost_tuned %>%
-  tune::show_best(metric = "rmse")
+  tune::show_best(metric = "rmse", n = 20)
 
-xgboost_best_params <- xgboost_tuned %>%
+ xgboost_best_params <- xgboost_tuned %>%
   tune::select_best("rmse")
 
-
-# * Look at hyperparameters ----
-xgboost_tuned$.metrics[[1]] %>% 
-  filter(.metric == "mae") %>% 
-      ggplot(., aes(x = min_n, y = .estimate)) +
-      geom_point()
-  
-xgboost_tuned$.metrics[[1]] %>% 
-  filter(.metric == "mae") %>% 
-  ggplot(., aes(x = tree_depth, y = .estimate)) +
-  geom_point()
-
-xgboost_tuned$.metrics[[1]] %>% 
-  filter(.metric == "mae") %>% 
-  ggplot(., aes(x = learn_rate, y = .estimate)) +
-  geom_point()
-
-xgboost_tuned$.metrics[[1]] %>% 
-  filter(.metric == "mae") %>% 
-  ggplot(., aes(x = loss_reduction, y = .estimate)) +
-  geom_point()
+# xgboost_best_params <- xgboost_tuned %>%
+#   tune::show_best(metric = "rmse", n = 20) %>%
+#   filter(row_number()==3)
 
 xgboost_best_params
 
@@ -145,51 +127,45 @@ xgboost_model_final <- xgboost_model %>%
 # check on training
 train_processed <- bake(preprocessing_recipe, new_data = training(ds_split))
 
-train_prediction <- xgboost_model_final %>%
-  fit(formula = brownlow_votes ~ ., data = train_processed) %>%
+final_model_fit <- xgboost_model_final %>%
+  fit(formula = brownlow_votes ~ ., data = train_processed) 
+
+train_prediction <- final_model_fit %>%
   predict(new_data = train_processed) %>%
   bind_cols(training(ds_split))
 
-train_fit <- xgboost_model_final %>%
-  fit(formula = brownlow_votes ~ ., data = train_processed) 
-
-xgboost_score_train <- train_prediction %>%
+train_prediction %>%
   yardstick::metrics(brownlow_votes, .pred) %>%
   mutate(.estimate = format(round(.estimate, 2), big.mark = ","))
-
-final_model_fit <- train_fit
 
 version = list.files(here("output")) %>% 
   tibble() %>% 
   filter(substr(.,1,1)=="v") %>% 
   mutate(value = as.numeric(substr(.,2,5))) %>% 
-  summarise(max = paste0("v",max(value) + 0.01,"_model_gbm.RData")) %>% 
+  summarise(max = paste0("v",format(max(value) + 0.01, nsmall = 2),"_model_gbm.RData")) %>% 
   pull(max)
 
 save(final_model_fit, file = here("output",version))
 
-xgboost_score_train
 
 # check on test
 test_processed  <- bake(preprocessing_recipe, new_data = testing(ds_split))
 
-test_prediction <- train_fit %>%
+test_prediction <- final_model_fit %>%
   predict(new_data = test_processed) %>%
   bind_cols(testing(ds_split))
 
-xgboost_score_test <- test_prediction %>%
+test_prediction %>%
   yardstick::metrics(brownlow_votes, .pred) %>%
   mutate(.estimate = format(round(.estimate, 2), big.mark = ","))
 
-xgboost_score_test
 
 # check that there is not an obvious issue with our model’s predictions, so plot the test data residuals
-vote_prediction_residual <- test_prediction %>%
+test_prediction %>%
   arrange(.pred) %>%
   mutate(residual_pct = (brownlow_votes - .pred) / .pred) %>%
-  select(.pred, residual_pct)
-
-ggplot(vote_prediction_residual, aes(x = .pred, y = residual_pct)) +
+  select(.pred, residual_pct) %>% 
+  ggplot(., aes(x = .pred, y = residual_pct)) +
   geom_point() +
   xlab("Predicted Votes") +
   ylab("Residual (%)") +
@@ -197,16 +173,9 @@ ggplot(vote_prediction_residual, aes(x = .pred, y = residual_pct)) +
   scale_y_continuous(labels = scales::percent)
 
 # plot variable importance
-vi <- final_model_fit %>% vip:::vi(.)
-vi
+final_model_fit %>% vip:::vip(., num_features = 30)
 
-train_prediction %>%
-  select(player_position, .pred) %>% 
-  ggplot(., aes(x=player_position, y=.pred)) + geom_boxplot()
-
-train_prediction %>%
-  select(match_pct.disposals, .pred) %>% 
-  ggplot(., aes(x=match_pct.disposals, y=.pred)) + geom_point()
+# SHAP values!
 
 
 # Merge predictions back onto original dataset ----
@@ -223,10 +192,14 @@ full_out <- full_prediction %>%
   mutate(name = paste(player_first_name,player_last_name,sep=" "),
          season = substr(match_date,1,4))
 
-check <- full_out %>% select(predicted_votes_raw, brownlow_votes, name, match_date)
-
 
 # Calculate Votes ----
+
+check <- full_out %>% 
+  group_by(match_id) %>% 
+  mutate(votes = rank(-predicted_votes_raw, ties.method = "random")) %>%
+  mutate(votes = case_when(votes == 1 ~ 3, votes == 2 ~ 2, votes == 3 ~ 1, TRUE ~ 0)) %>% 
+  select(match_id,season,match_round,name,predicted_votes_raw,votes,brownlow_votes)
 
 ## * Apply votes using dplyr method ----
 brownlow_votes <- full_out %>% 
@@ -236,6 +209,7 @@ brownlow_votes <- full_out %>%
   mutate(votes = rank(-votes, ties.method = "random")) %>% 
   ungroup() %>% 
   select(match_id,season,name,votes)
+
 
 ## * Check Brownlow Medal Tally ----
 brownlow_votes %>% 
@@ -261,16 +235,6 @@ brownlow_votes %>%
 
 brownlow_votes %>% 
   filter(name == "Nat Fyfe") %>% 
-  group_by(season, name) %>% 
-  summarise(medal_tally = sum(votes)) %>% 
-  ungroup() %>% 
-  group_by(season) %>% 
-  filter(medal_tally == max(medal_tally)) %>% 
-  arrange(season)
-
-## * Check the Oliver effect ----
-brownlow_votes %>% 
-  filter(name == "Clayton Oliver") %>% 
   group_by(season, name) %>% 
   summarise(medal_tally = sum(votes)) %>% 
   ungroup() %>% 
